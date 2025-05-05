@@ -27,17 +27,15 @@ def generate_test_image(width=8, height=20):
 
     # Horizontal part of L
     #grid[l_y:l_y+l_thickness, l_x:l_x+l_width] = 1
+    #grid[l_y:l_y+l_thickness, l_x:l_x+l_width] = 1
     # Vertical part of L
+    #grid[l_y:l_y+l_height, l_x:l_x+l_thickness] = 1
     #grid[l_y:l_y+l_height, l_x:l_x+l_thickness] = 1
 
     # Create rectangular obstacle in the upper right
     #rect_x, rect_y = 14, 3
-<<<<<<< HEAD
     #rect_width, rect_height = 4, 6
     #grid[rect_y:rect_y+rect_height, rect_x:rect_x+rect_width] = 1
-=======
-    rect_width, rect_height = 5, 5
->>>>>>> refs/remotes/origin/main
 
     obstacles = [[3, 8], [3, 9], [3, 10], [4, 8], [4, 9], [4, 10], [5, 8], [5, 9], [5, 10]]
 
@@ -521,11 +519,7 @@ def save_path_to_json(path, output_file="drone_path.json"):
 
     print(f"Path saved to {output_file}")
 
-<<<<<<< HEAD
 def main(image_path=None, drone_diameter=3, start_point=None, end_point=None, image_size=(20, 20)):
-=======
-def main(image_path=None, drone_diameter=3, start_point=(0,0), end_point=(5,12)):
->>>>>>> refs/remotes/origin/main
     """
     Main function to execute the drone path planning process.
 
@@ -536,13 +530,8 @@ def main(image_path=None, drone_diameter=3, start_point=(0,0), end_point=(5,12))
         start_point: Optional (x, y) start point
         end_point: Optional (x, y) end point
     """
-<<<<<<< HEAD
     # Load and process the image - this is our ORIGINAL grid
     original_grid = load_and_process_image(image_path, test_image_size=image_size)
-=======
-    # Step 1: Load and process the image - this is our ORIGINAL grid
-    original_grid = load_and_process_image()
->>>>>>> refs/remotes/origin/main
     if original_grid is None:
         return
 

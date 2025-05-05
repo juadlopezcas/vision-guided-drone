@@ -624,22 +624,3 @@ def main(image_path=None, drone_diameter=3, start_point=(0,0), end_point=(5,12))
 if __name__ == "__main__":
     # Create and solve a toy example with a drone diameter of 3 grid cells
     main(drone_diameter=2)
-
-    
-
-
-path = [
-    [0, 0],
-    [0, 1],
-    [1, 2],
-    [2, 3],
-    [3, 4],
-    [4, 5],
-    [5, 6],
-    [5, 7],
-    [5, 8],
-    [5, 9],
-    [5, 10],
-    [5, 11],
-    [5, 12],
-    ]

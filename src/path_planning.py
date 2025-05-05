@@ -6,14 +6,14 @@ from scipy import ndimage
 from matplotlib.patches import Circle, Patch
 import random
 
-def generate_test_image(width=20, height=20):
+def generate_test_image(width=8, height=20):
     """
     Generate a test image with obstacles for path planning testing.
 
     Args:
         width: Width of the grid
         height: Height of the grid
-
+    
     Returns:
         grid: Binary numpy array where 0 is free space and 1 is obstacle
     """
@@ -26,18 +26,22 @@ def generate_test_image(width=20, height=20):
     l_thickness = 3
 
     # Horizontal part of L
-    grid[l_y:l_y+l_thickness, l_x:l_x+l_width] = 1
+    #grid[l_y:l_y+l_thickness, l_x:l_x+l_width] = 1
     # Vertical part of L
-    grid[l_y:l_y+l_height, l_x:l_x+l_thickness] = 1
+    #grid[l_y:l_y+l_height, l_x:l_x+l_thickness] = 1
 
     # Create rectangular obstacle in the upper right
-    rect_x, rect_y = 14, 3
-    rect_width, rect_height = 4, 6
-    grid[rect_y:rect_y+rect_height, rect_x:rect_x+rect_width] = 1
+    #rect_x, rect_y = 14, 3
+    rect_width, rect_height = 5, 5
+
+    obstacles = [[3, 8], [3, 9], [3, 10], [4, 8], [4, 9], [4, 10], [5, 8], [5, 9], [5, 10]]
+
+    for coords in obstacles:
+        grid[coords[1] - 1, coords[0] - 1] = 1
 
     return grid
 
-def load_and_process_image(image_path=None, test_image_size=(20, 20)):
+def load_and_process_image(image_path=None, test_image_size=(6, 13)):
     """
     Load and process an image into a binary grid where 0 is free space and 1 is obstacle.
     If image_path is None, creates a test image with specified obstacles.
@@ -95,7 +99,7 @@ def inflate_obstacles(grid, drone_diameter):
 
     return inflated_grid
 
-def find_valid_points(grid, start=None, end=None):
+def find_valid_points(grid, start=(1,1), end=(6, 13)):
     """
     Find all valid points in the grid for the drone center.
     Optionally, randomly select valid start and end points if not provided.
@@ -221,7 +225,7 @@ def find_shortest_path(G, start, end):
         print("No path exists between start and end points")
         return None, float('inf')
 
-def visualize_path_with_safety_buffers(original_grid, inflated_grid, drone_diameter, valid_points=None, path=None, start=None, end=None):
+def visualize_path_with_safety_buffers(original_grid, inflated_grid, drone_diameter, valid_points=None, path=None, start=[1,1], end=[6,13]):
     """
     Visualize the path planning with clear distinction between original obstacles and safety buffers.
 
@@ -418,7 +422,7 @@ def visualize_grid_with_drone(grid, drone_diameter, valid_points=None, path=None
                                     original_grid[ny, nx] = 1
 
         # Draw original obstacles first
-        for y in range(height):
+        '''for y in range(height):
             for x in range(width):
                 if original_grid[y, x] == 1:  # Original obstacle
                     ax.fill([x, x+1, x+1, x], [y, y, y+1, y+1], 'black')
@@ -428,6 +432,7 @@ def visualize_grid_with_drone(grid, drone_diameter, valid_points=None, path=None
             for x in range(width):
                 if grid[y, x] == 1 and original_grid[y, x] == 0:  # Inflated but not original
                     ax.fill([x, x+1, x+1, x], [y, y, y+1, y+1], 'lightgray', alpha=0.5)
+'''
 
         # Draw path
         path_x = [p[0] + 0.5 for p in path]
@@ -449,14 +454,16 @@ def visualize_grid_with_drone(grid, drone_diameter, valid_points=None, path=None
 
         # Always show start and end positions clearly
         # Start position
-        start_x, start_y = path[0]
+        #start_x, start_y = path[0]
+        start_x, start_y = 1, 1
         start_point = ax.scatter(start_x + 0.5, start_y + 0.5, color='green', s=100, zorder=5)
         start_drone = Circle((start_x + 0.5, start_y + 0.5), drone_radius,
                           fill=False, color='green', linestyle='-', linewidth=2, alpha=1.0)
         ax.add_patch(start_drone)
 
         # End position
-        end_x, end_y = path[-1]
+        #end_x, end_y = path[-1]
+        end_x, end_y = 6, 13
         end_point = ax.scatter(end_x + 0.5, end_y + 0.5, color='red', s=100, zorder=5)
         end_drone = Circle((end_x + 0.5, end_y + 0.5), drone_radius,
                           fill=False, color='red', linestyle='-', linewidth=2, alpha=1.0)
@@ -509,18 +516,19 @@ def save_path_to_json(path, output_file="drone_path.json"):
 
     print(f"Path saved to {output_file}")
 
-def main(image_path=None, drone_diameter=3, start_point=None, end_point=None):
+def main(image_path=None, drone_diameter=3, start_point=(0,0), end_point=(5,12)):
     """
     Main function to execute the drone path planning process.
 
     Args:
         image_path: Path to the binary image file (1024x1024 pixels)
+
         drone_diameter: Diameter of the drone in grid cells
         start_point: Optional (x, y) start point
         end_point: Optional (x, y) end point
     """
     # Step 1: Load and process the image - this is our ORIGINAL grid
-    original_grid = load_and_process_image(image_path)
+    original_grid = load_and_process_image()
     if original_grid is None:
         return
 

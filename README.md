@@ -7,3 +7,5 @@ This project aims to develop an autonomous drone navigation system that uses com
 ## How to execute
 
 Instructions to come
+
+Test

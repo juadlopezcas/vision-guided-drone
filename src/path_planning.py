@@ -488,7 +488,7 @@ def visualize_grid_with_drone(grid, drone_diameter, valid_points=None, path=None
         plt.tight_layout()
         plt.show()
 
-def save_path_to_json(path, output_file="drone_path.json"):
+def save_path_to_json(path, corners, output_file="drone_path.json"):
     """
     Save the path to a JSON file for integration with other components.
 
@@ -502,10 +502,12 @@ def save_path_to_json(path, output_file="drone_path.json"):
 
     # Convert path to list of dictionaries with x, y coordinates
     path_dict = [{"x": point[0], "y": point[1]} for point in path]
+    corners_dict = [{"x": point[0][0], "y": point[0][1]} for point in corners]
 
     # Create a dictionary with path information
     path_data = {
         "path": path_dict,
+        "corners": corners_dict,
         "path_length": len(path),
         "timestamp": "2025-04-27T12:00:00"  # Example timestamp
     }
@@ -616,7 +618,7 @@ def main(image_path=None, drone_diameter=3, start_point=(0,0), end_point=(5,12))
     visualize_path_with_safety_buffers(original_grid, inflated_grid, drone_diameter, valid_points, path, start, end)
 
     # Step 7: Save path to JSON
-    save_path_to_json(path)
+    save_path_to_json(path, corners)
 
 # Example usage
 if __name__ == "__main__":

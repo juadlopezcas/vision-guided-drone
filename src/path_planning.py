@@ -5,7 +5,7 @@ import json
 from scipy import ndimage
 from matplotlib.patches import Circle, Patch
 import random
-
+import math
 def generate_test_image(width=8, height=20):
     """
     Generate a test image with obstacles for path planning testing.
@@ -516,6 +516,30 @@ def save_path_to_json(path, output_file="drone_path.json"):
 
     print(f"Path saved to {output_file}")
 
+def angle_between_vectors(a, b):
+    """Returns the angle in degrees between vectors a and b"""
+    dot = a[0]*b[0] + a[1]*b[1]
+    mag_a = math.hypot(*a)
+    mag_b = math.hypot(*b)
+    if mag_a == 0 or mag_b == 0:
+        return 0
+    cos_theta = dot / (mag_a * mag_b)
+    # Clamp to avoid numerical issues
+    cos_theta = max(min(cos_theta, 1), -1)
+    angle_rad = math.acos(cos_theta)
+    return math.degrees(angle_rad)
+
+def find_corners(path, angle_threshold = 16):
+    find_corners = []
+    for i in range(1, len(path) - 1):
+        p0, p1, p2 = path[i-1], path[i], path[i+1]
+        v1 = (p1[0] - p0[0], p1[1] - p0[1])
+        v2 = (p2[0] - p1[0], p2[1] - p1[1])
+        angle = angle_between_vectors(v1, v2)
+        if np.abs(angle) > angle_threshold:
+            find_corners.append((p1, round(angle, 2)))
+    return find_corners
+
 def main(image_path=None, drone_diameter=3, start_point=(0,0), end_point=(5,12)):
     """
     Main function to execute the drone path planning process.
@@ -580,6 +604,11 @@ def main(image_path=None, drone_diameter=3, start_point=(0,0), end_point=(5,12))
         print("No valid path found.")
         return
 
+    corners = find_corners(path, angle_threshold=0)
+
+    for point, angle in corners:
+        print(f"Corner at {point} with angle {angle}°")
+
     # Step 6: Visualize the result
     print(f"Found path with {len(path)} steps and total distance {distance:.2f}")
 
@@ -592,4 +621,23 @@ def main(image_path=None, drone_diameter=3, start_point=(0,0), end_point=(5,12))
 # Example usage
 if __name__ == "__main__":
     # Create and solve a toy example with a drone diameter of 3 grid cells
-    main(drone_diameter=1)
+    main(drone_diameter=2)
+
+    
+
+
+path = [
+    [0, 0],
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 4],
+    [4, 5],
+    [5, 6],
+    [5, 7],
+    [5, 8],
+    [5, 9],
+    [5, 10],
+    [5, 11],
+    [5, 12],
+    ]

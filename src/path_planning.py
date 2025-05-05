@@ -21,19 +21,24 @@ def generate_test_image(width=20, height=20):
     grid = np.zeros((height, width), dtype=np.uint8)
 
     # Create L-shaped obstacle
-    l_x, l_y = 3, 3
-    l_width, l_height = 10, 12
-    l_thickness = 3
+    #l_x, l_y = 3, 3
+    #l_width, l_height = 10, 12
+    #l_thickness = 3
 
     # Horizontal part of L
-    grid[l_y:l_y+l_thickness, l_x:l_x+l_width] = 1
+    #grid[l_y:l_y+l_thickness, l_x:l_x+l_width] = 1
     # Vertical part of L
-    grid[l_y:l_y+l_height, l_x:l_x+l_thickness] = 1
+    #grid[l_y:l_y+l_height, l_x:l_x+l_thickness] = 1
 
     # Create rectangular obstacle in the upper right
-    rect_x, rect_y = 14, 3
-    rect_width, rect_height = 4, 6
-    grid[rect_y:rect_y+rect_height, rect_x:rect_x+rect_width] = 1
+    #rect_x, rect_y = 14, 3
+    #rect_width, rect_height = 4, 6
+    #grid[rect_y:rect_y+rect_height, rect_x:rect_x+rect_width] = 1
+
+    obstacles = [[3, 8], [3, 9], [3, 10], [4, 8], [4, 9], [4, 10], [5, 8], [5, 9], [5, 10]]
+
+    for coords in obstacles:
+        grid[coords[1] - 1, coords[0] - 1] = 1
 
     return grid
 
@@ -312,7 +317,7 @@ def visualize_path_with_safety_buffers(original_grid, inflated_grid, drone_diame
     ax.set_xlim(0, width)
     ax.set_ylim(0, height)
     ax.set_title('Drone Path Planning with Safety Buffers')
-    ax.invert_yaxis()  # Invert y-axis to match traditional grid coordinates
+    #ax.invert_yaxis()  # Invert y-axis to match traditional grid coordinates
 
     plt.tight_layout()
     plt.show()
@@ -379,7 +384,7 @@ def visualize_grid_with_drone(grid, drone_diameter, valid_points=None, path=None
     ax.set_xticklabels([str(i) for i in range(width)])
     ax.set_yticks(np.arange(0.5, height + 0.5))
     ax.set_yticklabels([str(i) for i in range(height)])
-    ax.invert_yaxis()  # Invert y-axis to match traditional grid coordinates
+    #ax.invert_yaxis()  # Invert y-axis to match traditional grid coordinates
 
     ax.set_title('Drone Path Planning with Inflated Obstacles')
     plt.tight_layout()
@@ -471,7 +476,7 @@ def visualize_grid_with_drone(grid, drone_diameter, valid_points=None, path=None
         ax.set_xlim(0, width)
         ax.set_ylim(0, height)
         ax.set_title('Drone Movement with Original and Inflated Obstacles')
-        ax.invert_yaxis()  # Invert y-axis to match traditional grid coordinates
+        #ax.invert_yaxis()  # Invert y-axis to match traditional grid coordinates
 
         # Add a proper legend with distinct colors
         ax.legend([path_line, original_obstacle_patch, safety_buffer_patch, start_drone, end_drone],
@@ -509,7 +514,7 @@ def save_path_to_json(path, output_file="drone_path.json"):
 
     print(f"Path saved to {output_file}")
 
-def main(image_path=None, drone_diameter=3, start_point=None, end_point=None):
+def main(image_path=None, drone_diameter=3, start_point=None, end_point=None, image_size=(20, 20)):
     """
     Main function to execute the drone path planning process.
 
@@ -519,18 +524,18 @@ def main(image_path=None, drone_diameter=3, start_point=None, end_point=None):
         start_point: Optional (x, y) start point
         end_point: Optional (x, y) end point
     """
-    # Step 1: Load and process the image - this is our ORIGINAL grid
-    original_grid = load_and_process_image(image_path)
+    # Load and process the image - this is our ORIGINAL grid
+    original_grid = load_and_process_image(image_path, test_image_size=image_size)
     if original_grid is None:
         return
 
     print(f"Original grid shape: {original_grid.shape}")
 
-    # Step 2: Inflate obstacles based on drone diameter
+    # Inflate obstacles based on drone diameter
     inflated_grid = inflate_obstacles(original_grid, drone_diameter)
 
     # Create a visualization that shows both original and inflated obstacles
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 7))
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=image_size)
 
     # Plot original grid
     ax1.imshow(original_grid, cmap='binary', interpolation='none')
@@ -584,4 +589,4 @@ def main(image_path=None, drone_diameter=3, start_point=None, end_point=None):
 # Example usage
 if __name__ == "__main__":
     # Create and solve a toy example with a drone diameter of 3 grid cells
-    main(drone_diameter=1)
+    main(drone_diameter=2, start_point=(0, 0), end_point=(7, 18), image_size=(8, 20))

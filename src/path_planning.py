@@ -451,7 +451,6 @@ def visualize_grid_with_drone(grid, drone_diameter, valid_points=None, path=None
             ax.add_patch(drone)
             if i == 0:  # First circle for legend
                 drone_circles.append(drone)
-
         # Always show start and end positions clearly
         # Start position
         #start_x, start_y = path[0]

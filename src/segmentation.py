@@ -161,51 +161,56 @@ class pixelpercm:
 
         return cm_squared_per_pixel
     
-class obstaclefinder:
-    def analyze_grid_and_detect_obstacles(grid_image_path, obstacle_image_path, rows, cols, threshold=150):
-        """
-        Draws a labeled grid on the obstacle image and highlights obstacle boxes in red.
-        Returns a list of (row, col) for each obstacle box.
-        """
-        # Load images
-        obstacle_img_color = cv2.imread(obstacle_image_path)  # To draw on
-        obstacle_img_gray = cv2.imread(obstacle_image_path, cv2.IMREAD_GRAYSCALE)
-        h, w = obstacle_img_gray.shape
-        box_h = h // rows
-        box_w = w // cols
 
-        obstacle_coords = []
 
-        # Draw grid and labels over obstacle image
-        for r in range(rows):
-            y = r * box_h
-            y_mid = y + box_h // 2
-            cv2.putText(obstacle_img_color, str(r + 1), (5, y_mid), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+def analyze_grid_and_detect_obstacles(grid_image_path, obstacle_image_path, rows, cols, threshold):
+    """
+    Draws a labeled grid on the obstacle image and highlights obstacle boxes in red.
+    Returns a list of (row, col) for each obstacle box.
+    """
+    # Load images
+    obstacle_img_color = cv2.imread(obstacle_image_path)  # To draw on
+    obstacle_img_gray = cv2.imread(obstacle_image_path, cv2.IMREAD_GRAYSCALE)
+    
+    h, w, _ = obstacle_img_gray.shape
 
-            for c in range(cols):
-                x = c * box_w
-                x_mid = x + box_w // 2
+ 
+    box_h = h // rows
+    box_w = w // cols
 
-                # Draw grid box
-                cv2.rectangle(obstacle_img_color, (x, y), (x + box_w, y + box_h), (0, 255, 0), 1)
+    obstacle_coords = []
 
-                if r == 0:
-                    cv2.putText(obstacle_img_color, str(c + 1), (x_mid - 5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+    # Draw grid and labels over obstacle image
+    for r in range(rows):
+        y = r * box_h
+        y_mid = y + box_h // 2
+        #cv2.putText(obstacle_img_color, str(r + 1), (5, y_mid), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
 
-                # Check if this box has an obstacle
-                roi = obstacle_img_gray[y:y + box_h, x:x + box_w]
-                mean_intensity = np.mean(roi)
+        for c in range(cols):
+            x = c * box_w
+            x_mid = x + box_w // 2
 
-                if mean_intensity < threshold:
-                    obstacle_coords.append((r + 1, c + 1))
-                    cv2.rectangle(obstacle_img_color, (x, y), (x + box_w, y + box_h), (0, 0, 255), 2)
+            # Draw grid box
+            #cv2.rectangle(obstacle_img_color, (x, y), (x + box_w, y + box_h), (0, 255, 0), 1)
 
-        # Show final image
-        plt.figure(figsize=(12, 8))
-        plt.imshow(cv2.cvtColor(obstacle_img_color, cv2.COLOR_BGR2RGB))
-        plt.axis('off')
-        plt.title("Obstacle Image with Grid and Highlights")
-        plt.show()
+            if r == 0:
+                #cv2.putText(obstacle_img_color, str(c + 1), (x_mid - 5, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 1)
+                pass
 
-        print("Boxes with obstacles (row, col):", obstacle_coords)
-        return obstacle_coords
+            # Check if this box has an obstacle
+            roi = obstacle_img_gray[y:y + box_h, x:x + box_w]
+            mean_intensity = np.mean(roi)
+
+            if mean_intensity < threshold:
+                obstacle_coords.append((r + 1, c + 1))
+                cv2.rectangle(obstacle_img_color, (x, y), (x + box_w, y + box_h), (0, 0, 255), 2)
+
+    # Show final image
+    plt.figure(figsize=(12, 8))
+    plt.imshow(cv2.cvtColor(obstacle_img_color, cv2.COLOR_BGR2RGB))
+    plt.axis('off')
+    plt.title("Obstacle Image with Grid and Highlights")
+    plt.show()
+
+    print("Boxes with obstacles (row, col):", obstacle_coords)
+    return obstacle_coords

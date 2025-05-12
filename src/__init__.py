@@ -1,2 +1,2 @@
 from .path_planning import main
-from .segmentation import *
+from .segmentation import obstaclefinder

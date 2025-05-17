@@ -5,7 +5,7 @@ import json
 from scipy import ndimage
 from matplotlib.patches import Circle, Patch
 import random
-
+import math
 def generate_test_image(width=8, height=20):
     """
     Generate a test image with obstacles for path planning testing.
@@ -21,21 +21,18 @@ def generate_test_image(width=8, height=20):
     grid = np.zeros((height, width), dtype=np.uint8)
 
     # Create L-shaped obstacle
-    #l_x, l_y = 3, 3
-    #l_width, l_height = 10, 12
-    #l_thickness = 3
+    l_x, l_y = 3, 3
+    l_width, l_height = 10, 12
+    l_thickness = 3
 
     # Horizontal part of L
     #grid[l_y:l_y+l_thickness, l_x:l_x+l_width] = 1
-    #grid[l_y:l_y+l_thickness, l_x:l_x+l_width] = 1
     # Vertical part of L
-    #grid[l_y:l_y+l_height, l_x:l_x+l_thickness] = 1
     #grid[l_y:l_y+l_height, l_x:l_x+l_thickness] = 1
 
     # Create rectangular obstacle in the upper right
     #rect_x, rect_y = 14, 3
-    #rect_width, rect_height = 4, 6
-    #grid[rect_y:rect_y+rect_height, rect_x:rect_x+rect_width] = 1
+    rect_width, rect_height = 5, 5
 
     obstacles = [[3, 8], [3, 9], [3, 10], [4, 8], [4, 9], [4, 10], [5, 8], [5, 9], [5, 10]]
 
@@ -124,7 +121,7 @@ def find_valid_points(grid, start=(1,1), end=(6, 13)):
     for y in range(height):
         for x in range(width):
             if grid[y, x] == 0:  # Free space
-                valid_points.append((x, y))
+                valid_points.append((y, x))
 
     if not valid_points:
         print("No valid points found in the grid!")
@@ -132,19 +129,14 @@ def find_valid_points(grid, start=(1,1), end=(6, 13)):
 
     # Verify or select start point
     selected_start = start
-    if start is None or grid[start[1], start[0]] == 1:
-        selected_start = random.choice(valid_points)
+    if start is None or grid[start[0]-1, start[1]-1] == 1:
+        print("Selected start is not a valid point of the grid!")
 
     # Verify or select end point
     selected_end = end
-    if end is None or grid[end[1], end[0]] == 1:
+    if end is None or grid[end[0]-1, end[1]-1] == 1:
         # Make sure end is different from start
-        remaining_points = [p for p in valid_points if p != selected_start]
-        if remaining_points:
-            selected_end = random.choice(remaining_points)
-        else:
-            print("Cannot select distinct end point!")
-            selected_end = None
+        print("Selected start is not a valid point of the grid!")
 
     return valid_points, selected_start, selected_end
 
@@ -163,22 +155,22 @@ def create_navigation_graph(grid):
     G = nx.Graph()
 
     # Add nodes for each valid cell
-    for y in range(height):
-        for x in range(width):
-            if grid[y, x] == 0:  # Free space
+    for x in range(height):
+        for y in range(width):
+            if grid[x, y] == 0:  # Free space
                 G.add_node((x, y))
 
     # Add edges between adjacent valid cells
-    for y in range(height):
-        for x in range(width):
-            if grid[y, x] == 0:  # Free space
+    for x in range(height):
+        for y in range(width):
+            if grid[x, y] == 0:  # Free space
                 # Check all four adjacent cells (orthogonal moves)
                 for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
                     nx_pos, ny_pos = x + dx, y + dy
 
                     # Check if adjacent cell is within grid bounds and is free space
-                    if (0 <= nx_pos < width and 0 <= ny_pos < height and
-                        grid[ny_pos, nx_pos] == 0):
+                    if (0 <= nx_pos < height and 0 <= ny_pos < width and
+                        grid[nx_pos, ny_pos] == 0):
                         # Add edge with weight 1
                         G.add_edge((x, y), (nx_pos, ny_pos), weight=1)
 
@@ -187,12 +179,12 @@ def create_navigation_graph(grid):
                     nx_pos, ny_pos = x + dx, y + dy
 
                     # First check if diagonal cell is valid
-                    if (0 <= nx_pos < width and 0 <= ny_pos < height and
-                        grid[ny_pos, nx_pos] == 0):
+                    if (0 <= nx_pos < height and 0 <= ny_pos < width and
+                        grid[nx_pos, ny_pos] == 0):
 
                         # CRITICAL: Check that both adjacent cells are also free
                         # This prevents diagonal cutting around corners
-                        if grid[y, nx_pos] == 0 and grid[ny_pos, x] == 0:
+                        if grid[x,ny_pos] == 0 and grid[nx_pos, y] == 0:
                             # Add diagonal edge with weight sqrt(2) ≈ 1.414
                             G.add_edge((x, y), (nx_pos, ny_pos), weight=1.414)
 
@@ -247,17 +239,17 @@ def visualize_path_with_safety_buffers(original_grid, inflated_grid, drone_diame
     fig, ax = plt.subplots(figsize=(12, 12))
 
     # Draw grid
-    for x in range(width + 1):
-        ax.axvline(x, color='lightgray', linestyle='-', linewidth=0.5)
-    for y in range(height + 1):
-        ax.axhline(y, color='lightgray', linestyle='-', linewidth=0.5)
+    for x in range(height + 1):
+        ax.axhline(x, color='lightgray', linestyle='-', linewidth=0.5)
+    for y in range(width + 1):
+        ax.axvline(y, color='lightgray', linestyle='-', linewidth=0.5)
 
     # First, draw the areas that are in the inflated grid but not in the original grid (safety buffers)
     buffer_zone = np.logical_and(inflated_grid == 1, original_grid == 0)
-    for y in range(height):
-        for x in range(width):
-            if buffer_zone[y, x]:
-                ax.fill([x, x+1, x+1, x], [y, y, y+1, y+1], 'lightgray', alpha=0.7)
+    for x in range(height):
+        for y in range(width):
+            if buffer_zone[x, y]:
+                ax.fill([y, y+1, y+1, y], [x, x, x+1, x+1], 'lightgray', alpha=0.7)
 
     # Then, draw the original obstacles (with dark gray color as requested)
     for y in range(height):
@@ -269,14 +261,14 @@ def visualize_path_with_safety_buffers(original_grid, inflated_grid, drone_diame
     if valid_points:
         valid_x = [p[0] for p in valid_points]
         valid_y = [p[1] for p in valid_points]
-        ax.scatter([x + 0.5 for x in valid_x],
-                  [y + 0.5 for y in valid_y],
+        ax.scatter([y + 0.5 for y in valid_y],
+                  [x + 0.5 for x in valid_x],
                   color='lightblue', s=10, alpha=0.3)
 
     # Draw path if provided
     if path:
-        path_x = [p[0] + 0.5 for p in path]
-        path_y = [p[1] + 0.5 for p in path]
+        path_x = [p[1] + 0.5 for p in path]
+        path_y = [p[0] + 0.5 for p in path]
         path_line = ax.plot(path_x, path_y, 'red', linestyle='-', linewidth=2)[0]
 
     # Draw drone at select points along the path (to avoid visual clutter)
@@ -285,21 +277,21 @@ def visualize_path_with_safety_buffers(original_grid, inflated_grid, drone_diame
         for i in range(0, len(path), sampling):
             if i == 0 or i == len(path) - 1:
                 continue  # Skip start and end, we'll draw them specially
-            x, y = path[i]
+            y, x = path[i]
             drone = Circle((x + 0.5, y + 0.5), drone_radius,
                           fill=False, color='blue', linestyle='-', linewidth=1, alpha=0.3)
             ax.add_patch(drone)
 
     # Draw start and end positions with drone visualization
     if start and path:
-        start_x, start_y = path[0]
+        start_y, start_x = path[0]
         start_point = ax.scatter(start_x + 0.5, start_y + 0.5, color='green', s=100, zorder=5)
         start_drone = Circle((start_x + 0.5, start_y + 0.5), drone_radius,
                             fill=False, color='green', linestyle='-', linewidth=2)
         ax.add_patch(start_drone)
 
     if end and path:
-        end_x, end_y = path[-1]
+        end_y, end_x = path[-1]
         end_point = ax.scatter(end_x + 0.5, end_y + 0.5, color='red', s=100, zorder=5)
         end_drone = Circle((end_x + 0.5, end_y + 0.5), drone_radius,
                           fill=False, color='red', linestyle='-', linewidth=2)
@@ -319,7 +311,7 @@ def visualize_path_with_safety_buffers(original_grid, inflated_grid, drone_diame
     ax.set_xlim(0, width)
     ax.set_ylim(0, height)
     ax.set_title('Drone Path Planning with Safety Buffers')
-    #ax.invert_yaxis()  # Invert y-axis to match traditional grid coordinates
+    ax.invert_yaxis()  # Invert y-axis to match traditional grid coordinates
 
     plt.tight_layout()
     plt.show()
@@ -342,7 +334,7 @@ def visualize_grid_with_drone(grid, drone_diameter, valid_points=None, path=None
     drone_radius = drone_diameter / 2
 
     # First visualization - with inflated obstacles
-    fig, ax = plt.subplots(figsize=(10, 10))
+    fig, ax = plt.subplots(figsize=(6, 3))
 
     # Draw grid
     for x in range(width + 1):
@@ -386,7 +378,7 @@ def visualize_grid_with_drone(grid, drone_diameter, valid_points=None, path=None
     ax.set_xticklabels([str(i) for i in range(width)])
     ax.set_yticks(np.arange(0.5, height + 0.5))
     ax.set_yticklabels([str(i) for i in range(height)])
-    #ax.invert_yaxis()  # Invert y-axis to match traditional grid coordinates
+    ax.invert_yaxis()  # Invert y-axis to match traditional grid coordinates
 
     ax.set_title('Drone Path Planning with Inflated Obstacles')
     plt.tight_layout()
@@ -454,7 +446,6 @@ def visualize_grid_with_drone(grid, drone_diameter, valid_points=None, path=None
             ax.add_patch(drone)
             if i == 0:  # First circle for legend
                 drone_circles.append(drone)
-
         # Always show start and end positions clearly
         # Start position
         #start_x, start_y = path[0]
@@ -481,7 +472,7 @@ def visualize_grid_with_drone(grid, drone_diameter, valid_points=None, path=None
         ax.set_xlim(0, width)
         ax.set_ylim(0, height)
         ax.set_title('Drone Movement with Original and Inflated Obstacles')
-        #ax.invert_yaxis()  # Invert y-axis to match traditional grid coordinates
+        ax.invert_yaxis()  # Invert y-axis to match traditional grid coordinates
 
         # Add a proper legend with distinct colors
         ax.legend([path_line, original_obstacle_patch, safety_buffer_patch, start_drone, end_drone],
@@ -491,7 +482,7 @@ def visualize_grid_with_drone(grid, drone_diameter, valid_points=None, path=None
         plt.tight_layout()
         plt.show()
 
-def save_path_to_json(path, output_file="drone_path.json"):
+def save_path_to_json(path, corners, output_file="drone_path.json"):
     """
     Save the path to a JSON file for integration with other components.
 
@@ -505,10 +496,12 @@ def save_path_to_json(path, output_file="drone_path.json"):
 
     # Convert path to list of dictionaries with x, y coordinates
     path_dict = [{"x": point[0], "y": point[1]} for point in path]
+    corners_dict = [{"x": point[0][0], "y": point[0][1]} for point in corners]
 
     # Create a dictionary with path information
     path_data = {
         "path": path_dict,
+        "corners": corners_dict,
         "path_length": len(path),
         "timestamp": "2025-04-27T12:00:00"  # Example timestamp
     }
@@ -519,7 +512,31 @@ def save_path_to_json(path, output_file="drone_path.json"):
 
     print(f"Path saved to {output_file}")
 
-def main(image_path=None, drone_diameter=3, start_point=None, end_point=None, image_size=(20, 20)):
+def angle_between_vectors(a, b):
+    """Returns the angle in degrees between vectors a and b"""
+    dot = a[0]*b[0] + a[1]*b[1]
+    mag_a = math.hypot(*a)
+    mag_b = math.hypot(*b)
+    if mag_a == 0 or mag_b == 0:
+        return 0
+    cos_theta = dot / (mag_a * mag_b)
+    # Clamp to avoid numerical issues
+    cos_theta = max(min(cos_theta, 1), -1)
+    angle_rad = math.acos(cos_theta)
+    return math.degrees(angle_rad)
+
+def find_corners(path, angle_threshold = 16):
+    find_corners = []
+    for i in range(1, len(path) - 1):
+        p0, p1, p2 = path[i-1], path[i], path[i+1]
+        v1 = (p1[0] - p0[0], p1[1] - p0[1])
+        v2 = (p2[0] - p1[0], p2[1] - p1[1])
+        angle = angle_between_vectors(v1, v2)
+        if np.abs(angle) > angle_threshold:
+            find_corners.append((p1, round(angle, 2)))
+    return find_corners
+
+def main(image_path=None, drone_diameter=3, start_point=(0,0), end_point=(5,12)):
     """
     Main function to execute the drone path planning process.
 
@@ -530,18 +547,18 @@ def main(image_path=None, drone_diameter=3, start_point=None, end_point=None, im
         start_point: Optional (x, y) start point
         end_point: Optional (x, y) end point
     """
-    # Load and process the image - this is our ORIGINAL grid
-    original_grid = load_and_process_image(image_path, test_image_size=image_size)
+    # Step 1: Load and process the image - this is our ORIGINAL grid
+    original_grid = load_and_process_image()
     if original_grid is None:
         return
 
     print(f"Original grid shape: {original_grid.shape}")
 
-    # Inflate obstacles based on drone diameter
+    # Step 2: Inflate obstacles based on drone diameter
     inflated_grid = inflate_obstacles(original_grid, drone_diameter)
 
     # Create a visualization that shows both original and inflated obstacles
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=image_size)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 7))
 
     # Plot original grid
     ax1.imshow(original_grid, cmap='binary', interpolation='none')
@@ -583,6 +600,11 @@ def main(image_path=None, drone_diameter=3, start_point=None, end_point=None, im
         print("No valid path found.")
         return
 
+    corners = find_corners(path, angle_threshold=0)
+
+    for point, angle in corners:
+        print(f"Corner at {point} with angle {angle}°")
+
     # Step 6: Visualize the result
     print(f"Found path with {len(path)} steps and total distance {distance:.2f}")
 
@@ -590,9 +612,9 @@ def main(image_path=None, drone_diameter=3, start_point=None, end_point=None, im
     visualize_path_with_safety_buffers(original_grid, inflated_grid, drone_diameter, valid_points, path, start, end)
 
     # Step 7: Save path to JSON
-    save_path_to_json(path)
+    save_path_to_json(path, corners)
 
 # Example usage
 if __name__ == "__main__":
     # Create and solve a toy example with a drone diameter of 3 grid cells
-    main(drone_diameter=2, start_point=(0, 0), end_point=(7, 18), image_size=(8, 20))
+    main(drone_diameter=2)

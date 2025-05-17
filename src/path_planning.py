@@ -121,7 +121,7 @@ def find_valid_points(grid, start=(1,1), end=(6, 13)):
     for y in range(height):
         for x in range(width):
             if grid[y, x] == 0:  # Free space
-                valid_points.append((x, y))
+                valid_points.append((y, x))
 
     if not valid_points:
         print("No valid points found in the grid!")
@@ -129,19 +129,14 @@ def find_valid_points(grid, start=(1,1), end=(6, 13)):
 
     # Verify or select start point
     selected_start = start
-    if start is None or grid[start[1], start[0]] == 1:
-        selected_start = random.choice(valid_points)
+    if start is None or grid[start[0]-1, start[1]-1] == 1:
+        print("Selected start is not a valid point of the grid!")
 
     # Verify or select end point
     selected_end = end
-    if end is None or grid[end[1], end[0]] == 1:
+    if end is None or grid[end[0]-1, end[1]-1] == 1:
         # Make sure end is different from start
-        remaining_points = [p for p in valid_points if p != selected_start]
-        if remaining_points:
-            selected_end = random.choice(remaining_points)
-        else:
-            print("Cannot select distinct end point!")
-            selected_end = None
+        print("Selected start is not a valid point of the grid!")
 
     return valid_points, selected_start, selected_end
 
@@ -160,22 +155,22 @@ def create_navigation_graph(grid):
     G = nx.Graph()
 
     # Add nodes for each valid cell
-    for y in range(height):
-        for x in range(width):
-            if grid[y, x] == 0:  # Free space
+    for x in range(height):
+        for y in range(width):
+            if grid[x, y] == 0:  # Free space
                 G.add_node((x, y))
 
     # Add edges between adjacent valid cells
-    for y in range(height):
-        for x in range(width):
-            if grid[y, x] == 0:  # Free space
+    for x in range(height):
+        for y in range(width):
+            if grid[x, y] == 0:  # Free space
                 # Check all four adjacent cells (orthogonal moves)
                 for dx, dy in [(1, 0), (-1, 0), (0, 1), (0, -1)]:
                     nx_pos, ny_pos = x + dx, y + dy
 
                     # Check if adjacent cell is within grid bounds and is free space
-                    if (0 <= nx_pos < width and 0 <= ny_pos < height and
-                        grid[ny_pos, nx_pos] == 0):
+                    if (0 <= nx_pos < height and 0 <= ny_pos < width and
+                        grid[nx_pos, ny_pos] == 0):
                         # Add edge with weight 1
                         G.add_edge((x, y), (nx_pos, ny_pos), weight=1)
 
@@ -184,12 +179,12 @@ def create_navigation_graph(grid):
                     nx_pos, ny_pos = x + dx, y + dy
 
                     # First check if diagonal cell is valid
-                    if (0 <= nx_pos < width and 0 <= ny_pos < height and
-                        grid[ny_pos, nx_pos] == 0):
+                    if (0 <= nx_pos < height and 0 <= ny_pos < width and
+                        grid[nx_pos, ny_pos] == 0):
 
                         # CRITICAL: Check that both adjacent cells are also free
                         # This prevents diagonal cutting around corners
-                        if grid[y, nx_pos] == 0 and grid[ny_pos, x] == 0:
+                        if grid[x,ny_pos] == 0 and grid[nx_pos, y] == 0:
                             # Add diagonal edge with weight sqrt(2) ≈ 1.414
                             G.add_edge((x, y), (nx_pos, ny_pos), weight=1.414)
 
@@ -244,17 +239,17 @@ def visualize_path_with_safety_buffers(original_grid, inflated_grid, drone_diame
     fig, ax = plt.subplots(figsize=(12, 12))
 
     # Draw grid
-    for x in range(width + 1):
-        ax.axvline(x, color='lightgray', linestyle='-', linewidth=0.5)
-    for y in range(height + 1):
-        ax.axhline(y, color='lightgray', linestyle='-', linewidth=0.5)
+    for x in range(height + 1):
+        ax.axhline(x, color='lightgray', linestyle='-', linewidth=0.5)
+    for y in range(width + 1):
+        ax.axvline(y, color='lightgray', linestyle='-', linewidth=0.5)
 
     # First, draw the areas that are in the inflated grid but not in the original grid (safety buffers)
     buffer_zone = np.logical_and(inflated_grid == 1, original_grid == 0)
-    for y in range(height):
-        for x in range(width):
-            if buffer_zone[y, x]:
-                ax.fill([x, x+1, x+1, x], [y, y, y+1, y+1], 'lightgray', alpha=0.7)
+    for x in range(height):
+        for y in range(width):
+            if buffer_zone[x, y]:
+                ax.fill([y, y+1, y+1, y], [x, x, x+1, x+1], 'lightgray', alpha=0.7)
 
     # Then, draw the original obstacles (with dark gray color as requested)
     for y in range(height):
@@ -266,14 +261,14 @@ def visualize_path_with_safety_buffers(original_grid, inflated_grid, drone_diame
     if valid_points:
         valid_x = [p[0] for p in valid_points]
         valid_y = [p[1] for p in valid_points]
-        ax.scatter([x + 0.5 for x in valid_x],
-                  [y + 0.5 for y in valid_y],
+        ax.scatter([y + 0.5 for y in valid_y],
+                  [x + 0.5 for x in valid_x],
                   color='lightblue', s=10, alpha=0.3)
 
     # Draw path if provided
     if path:
-        path_x = [p[0] + 0.5 for p in path]
-        path_y = [p[1] + 0.5 for p in path]
+        path_x = [p[1] + 0.5 for p in path]
+        path_y = [p[0] + 0.5 for p in path]
         path_line = ax.plot(path_x, path_y, 'red', linestyle='-', linewidth=2)[0]
 
     # Draw drone at select points along the path (to avoid visual clutter)
@@ -282,21 +277,21 @@ def visualize_path_with_safety_buffers(original_grid, inflated_grid, drone_diame
         for i in range(0, len(path), sampling):
             if i == 0 or i == len(path) - 1:
                 continue  # Skip start and end, we'll draw them specially
-            x, y = path[i]
+            y, x = path[i]
             drone = Circle((x + 0.5, y + 0.5), drone_radius,
                           fill=False, color='blue', linestyle='-', linewidth=1, alpha=0.3)
             ax.add_patch(drone)
 
     # Draw start and end positions with drone visualization
     if start and path:
-        start_x, start_y = path[0]
+        start_y, start_x = path[0]
         start_point = ax.scatter(start_x + 0.5, start_y + 0.5, color='green', s=100, zorder=5)
         start_drone = Circle((start_x + 0.5, start_y + 0.5), drone_radius,
                             fill=False, color='green', linestyle='-', linewidth=2)
         ax.add_patch(start_drone)
 
     if end and path:
-        end_x, end_y = path[-1]
+        end_y, end_x = path[-1]
         end_point = ax.scatter(end_x + 0.5, end_y + 0.5, color='red', s=100, zorder=5)
         end_drone = Circle((end_x + 0.5, end_y + 0.5), drone_radius,
                           fill=False, color='red', linestyle='-', linewidth=2)
@@ -339,7 +334,7 @@ def visualize_grid_with_drone(grid, drone_diameter, valid_points=None, path=None
     drone_radius = drone_diameter / 2
 
     # First visualization - with inflated obstacles
-    fig, ax = plt.subplots(figsize=(10, 10))
+    fig, ax = plt.subplots(figsize=(6, 3))
 
     # Draw grid
     for x in range(width + 1):

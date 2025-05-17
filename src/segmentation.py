@@ -120,36 +120,35 @@ class segmentation:
         plt.axis('off')
         plt.show()
 
-class pixelpercm:
-    def analyze_segmentation_mask(mask_path):
-        # Load segmentation mask (grayscale)
-        mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+def analyze_segmentation_mask(mask_path):
+    # Load segmentation mask (grayscale)
+    mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
         
-        if mask is None:
-            raise ValueError("Error: Could not load the image. Check the file path.")
+    if mask is None:
+        raise ValueError("Error: Could not load the image. Check the file path.")
 
-        # Force binary: 0 (background), 255 (object)
-        binary_mask = np.where(mask == 255, 255, 0).astype(np.uint8)
+    # Force binary: 0 (background), 255 (object)
+    binary_mask = np.where(mask == 255, 255, 0).astype(np.uint8)
 
-        # Count pixels for each class
-        background_pixels = np.sum(binary_mask == 0)
-        object_pixels = np.sum(binary_mask == 255)
+    # Count pixels for each class
+    background_pixels = np.sum(binary_mask == 0)
+    object_pixels = np.sum(binary_mask == 255)
 
-        # Estimate dimensions (assuming square)
-        estimated_side = math.sqrt(object_pixels)
+    # Estimate dimensions (assuming square)
+    estimated_side = math.sqrt(object_pixels)
 
-        # Print results
-        print(f"Class 0 (Background): {background_pixels} pixels")
-        print(f"Class 255 (Object): {object_pixels} pixels")
-        print(f"Estimated object dimensions : {estimated_side:.2f} x {estimated_side:.2f} pixels")
+    # Print results
+    print(f"Class 0 (Background): {background_pixels} pixels")
+    print(f"Class 255 (Object): {object_pixels} pixels")
+    print(f"Estimated object dimensions : {estimated_side:.2f} x {estimated_side:.2f} pixels")
 
-        return {
-            "background_pixels": background_pixels,
-            "object_pixels": object_pixels,
-            "estimated_side_length": estimated_side
-        }
+    return {
+        "background_pixels": background_pixels,
+        "object_pixels": object_pixels,
+        "estimated_side_length": estimated_side
+    }
      
-    def compute_cm_squared_per_pixel(real_width_cm, real_height_cm, pixel_width, pixel_height):
+def compute_cm_squared_per_pixel(real_width_cm, real_height_cm, pixel_width, pixel_height):
         # Compute total real-world area (cm²)
         real_area_cm2 = real_width_cm * real_height_cm
 
@@ -163,7 +162,7 @@ class pixelpercm:
     
 
 
-def analyze_grid_and_detect_obstacles(grid_image_path, obstacle_image_path, rows, cols, threshold):
+def analyze_grid_and_detect_obstacles(grid_image_path ,obstacle_image_path, rows, cols, threshold):
     """
     Draws a labeled grid on the obstacle image and highlights obstacle boxes in red.
     Returns a list of (row, col) for each obstacle box.
@@ -172,7 +171,7 @@ def analyze_grid_and_detect_obstacles(grid_image_path, obstacle_image_path, rows
     obstacle_img_color = cv2.imread(obstacle_image_path)  # To draw on
     obstacle_img_gray = cv2.imread(obstacle_image_path, cv2.IMREAD_GRAYSCALE)
     
-    h, w, _ = obstacle_img_gray.shape
+    h, w = obstacle_img_gray.shape
 
  
     box_h = h // rows

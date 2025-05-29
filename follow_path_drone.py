@@ -6,7 +6,7 @@ import math
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-SIM_MODE = True
+SIM_MODE = False  # Set to False when using real drone
 
 if not SIM_MODE:
     import cflib.crtp
@@ -16,16 +16,15 @@ if not SIM_MODE:
     from cflib.crazyflie.syncLogger import SyncLogger
     from cflib.crazyflie.log import LogConfig
 
-WAYPOINTS_FILE = "drone_path.json"
-# Constants for the Crazyflie drone
-URI = 'radio://0/80/2M'
-TAKEOFF_HEIGHT = 0.25  # meters
-TRAVEL_DURATION = 0.5  # seconds per waypoint
-GRID_CELL_SIZE = 0.15  # meters per grid cell
+WAYPOINTS_FILE = "drone_path_1.json"
+URI = 'radio://0/80/2M/E7E7E7E7E8'
+TAKEOFF_HEIGHT = 0.25
+TRAVEL_DURATION = 0.5
+GRID_CELL_SIZE = 0.15
 
 current_z = 0.0
 trajectory = []
-current_pos = [0.0, 0.0, 0.0]
+current_pos = [-0.075, 0.525, 0.0]
 offset = [0.0, 0.0]
 
 mpl.style.use('seaborn-v0_8-darkgrid')
@@ -89,11 +88,6 @@ def update_plot(drone_dot):
     plt.draw()
     plt.pause(0.01)
 
-def calculate_yaw(from_pos, to_pos):
-    dx = to_pos[0] - from_pos[0]
-    dy = to_pos[1] - from_pos[1]
-    return math.degrees(math.atan2(dy, dx))
-
 def main():
     global current_z, offset
     logging.basicConfig(level=logging.INFO)
@@ -106,6 +100,9 @@ def main():
         time.sleep(2.0)
 
         path, corners = scale_and_shift_path(raw_path, raw_corners, (0.0, 0.0))
+
+        print("[SIM] Hovering to stabilize...")
+        time.sleep(3.0)
 
         for idx, (x, y) in enumerate(path):
             print(f"[SIM] Flying to waypoint {idx + 1}/{len(path)}: x={x:.2f}, y={y:.2f}, z={TAKEOFF_HEIGHT:.2f}")
@@ -121,6 +118,8 @@ def main():
                     update_plot(drone_dot)
                     time.sleep(0.05)
 
+        print("[SIM] Hovering before landing...")
+        time.sleep(2.0)
         print("[SIM] Landing...")
         time.sleep(2.0)
         update_plot(drone_dot)
@@ -140,31 +139,31 @@ def main():
         commander.takeoff(TAKEOFF_HEIGHT, 2.0)
         time.sleep(3.0)
 
+        print("Hovering to stabilize...")
+        commander.go_to(current_pos[0], current_pos[1], TAKEOFF_HEIGHT, yaw=0.0, duration_s=3.0, relative=False)
+        time.sleep(3.0)
+
         offset = current_pos[0] - (raw_path[0][0] + 0.5) * GRID_CELL_SIZE, current_pos[1] - (raw_path[0][1] + 0.5) * GRID_CELL_SIZE
         path, corners = scale_and_shift_path(raw_path, raw_corners, offset)
 
         for idx, (x, y) in enumerate(path):
-            if idx < len(path) - 1:
-                next_x, next_y = path[idx + 1]
-                yaw = calculate_yaw((x, y), (next_x, next_y))
-            else:
-                yaw = 0.0
-
-            print(f"Flying to waypoint {idx + 1}/{len(path)}: x={x:.2f}, y={y:.2f}, z={TAKEOFF_HEIGHT:.2f}, yaw={yaw:.1f}")
-            commander.go_to(x, y, TAKEOFF_HEIGHT, yaw=yaw, duration_s=TRAVEL_DURATION, relative=False)
+            print(f"Flying to waypoint {idx + 1}/{len(path)}: x={x:.2f}, y={y:.2f}, z={TAKEOFF_HEIGHT:.2f}")
+            commander.go_to(x, y, TAKEOFF_HEIGHT, yaw=0.0, duration_s=TRAVEL_DURATION, relative=False)
             start = time.time()
             while time.time() - start < TRAVEL_DURATION + 0.2:
                 update_plot(drone_dot)
                 time.sleep(0.05)
 
+            trajectory.append((x, y))
+
             if raw_path[idx] in raw_corners:
                 print(f"Hovering at corner: x={x:.2f}, y={y:.2f}")
-                commander.go_to(x, y, TAKEOFF_HEIGHT, yaw=yaw, duration_s=2.0, relative=False)
-                time.sleep(2.0)
-                commander.go_to(x, y, TAKEOFF_HEIGHT, yaw=yaw, duration_s=2.0, relative=False)
-                time.sleep(2.0)
-                commander.go_to(x, y, TAKEOFF_HEIGHT, yaw=yaw, duration_s=1.5, relative=False)
-                time.sleep(1.5)
+                commander.go_to(x, y, TAKEOFF_HEIGHT, yaw=0.0, duration_s=1.0, relative=False)
+                time.sleep(1.0)
+
+        print("Hovering before landing...")
+        commander.go_to(x, y, TAKEOFF_HEIGHT, yaw=0.0, duration_s=2.0, relative=False)
+        time.sleep(2.0)
 
         print("Landing...")
         commander.land(0.0, 2.0)

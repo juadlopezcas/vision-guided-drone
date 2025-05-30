@@ -2,11 +2,10 @@ import time
 import json
 import logging
 import threading
-import math
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-SIM_MODE = False  # Set to False when using real drone
+SIM_MODE = False  # Set to False when using real drone; False: Sim Mode (bypass connection to drone); True: Drone flight mode
 
 if not SIM_MODE:
     import cflib.crtp
@@ -16,15 +15,15 @@ if not SIM_MODE:
     from cflib.crazyflie.syncLogger import SyncLogger
     from cflib.crazyflie.log import LogConfig
 
-WAYPOINTS_FILE = "drone_path_1.json"
-URI = 'radio://0/80/2M/E7E7E7E7E8'
+WAYPOINTS_FILE = "drone_path.json" # input path json here
+URI = 'radio://0/80/2M/E7E7E7E7E8' # input the drone's URI here
 TAKEOFF_HEIGHT = 0.25
 TRAVEL_DURATION = 0.5
-GRID_CELL_SIZE = 0.15
+GRID_CELL_SIZE = 0.1524  # 6x6 inches grid in meters (grid size)
 
 current_z = 0.0
 trajectory = []
-current_pos = [-0.075, 0.525, 0.0]
+current_pos = [0.0, 0.0, 0.0]
 offset = [0.0, 0.0]
 
 mpl.style.use('seaborn-v0_8-darkgrid')
@@ -66,10 +65,10 @@ def setup_plot(path):
     ax.plot(px, py, 'k--', linewidth=1, label='Planned Path')
     drone_dot, = ax.plot([], [], 'r-', linewidth=2, label='Drone Trajectory')
 
-    ax.set_xticks([i * GRID_CELL_SIZE for i in range(-1, 22)])
-    ax.set_yticks([i * GRID_CELL_SIZE for i in range(-1, 12)])
-    ax.set_xlim(-0.1, 3.5)
-    ax.set_ylim(0.0, 2.0)
+    ax.set_xticks([i * GRID_CELL_SIZE for i in range(21)])
+    ax.set_yticks([i * GRID_CELL_SIZE for i in range(14)])
+    ax.set_xlim(-0.1, 3.2)
+    ax.set_ylim(0.0, 2.1)
     ax.set_xlabel("X [m] (Grid Left-Right)", fontsize=12)
     ax.set_ylabel("Y [m] (Grid Forward-Back)", fontsize=12)
     ax.set_title("Live Drone Trajectory Tracking", fontsize=14, weight='bold')

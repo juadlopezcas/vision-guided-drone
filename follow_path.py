@@ -2,11 +2,10 @@ import time
 import json
 import logging
 import threading
-import math
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-SIM_MODE = True
+SIM_MODE = False  # Set to False when using real drone; False: Sim Mode (bypass connection to drone); True: Drone flight mode
 
 if not SIM_MODE:
     import cflib.crtp
@@ -16,12 +15,11 @@ if not SIM_MODE:
     from cflib.crazyflie.syncLogger import SyncLogger
     from cflib.crazyflie.log import LogConfig
 
-WAYPOINTS_FILE = "drone_path.json"
-# Constants for the Crazyflie drone
-URI = 'radio://0/80/2M'
-TAKEOFF_HEIGHT = 0.25  # meters
-TRAVEL_DURATION = 0.5  # seconds per waypoint
-GRID_CELL_SIZE = 0.15  # meters per grid cell
+WAYPOINTS_FILE = "drone_path.json" # input path json here
+URI = 'radio://0/80/2M/E7E7E7E7E8' # input the drone's URI here
+TAKEOFF_HEIGHT = 0.25
+TRAVEL_DURATION = 0.5
+GRID_CELL_SIZE = 0.1524  # 6x6 inches grid in meters (grid size)
 
 current_z = 0.0
 trajectory = []
@@ -67,10 +65,10 @@ def setup_plot(path):
     ax.plot(px, py, 'k--', linewidth=1, label='Planned Path')
     drone_dot, = ax.plot([], [], 'r-', linewidth=2, label='Drone Trajectory')
 
-    ax.set_xticks([i * GRID_CELL_SIZE for i in range(-1, 22)])
-    ax.set_yticks([i * GRID_CELL_SIZE for i in range(-1, 12)])
-    ax.set_xlim(-0.1, 3.5)
-    ax.set_ylim(0.0, 2.0)
+    ax.set_xticks([i * GRID_CELL_SIZE for i in range(21)])
+    ax.set_yticks([i * GRID_CELL_SIZE for i in range(14)])
+    ax.set_xlim(-0.1, 3.2)
+    ax.set_ylim(0.0, 2.1)
     ax.set_xlabel("X [m] (Grid Left-Right)", fontsize=12)
     ax.set_ylabel("Y [m] (Grid Forward-Back)", fontsize=12)
     ax.set_title("Live Drone Trajectory Tracking", fontsize=14, weight='bold')
@@ -89,11 +87,6 @@ def update_plot(drone_dot):
     plt.draw()
     plt.pause(0.01)
 
-def calculate_yaw(from_pos, to_pos):
-    dx = to_pos[0] - from_pos[0]
-    dy = to_pos[1] - from_pos[1]
-    return math.degrees(math.atan2(dy, dx))
-
 def main():
     global current_z, offset
     logging.basicConfig(level=logging.INFO)
@@ -106,6 +99,9 @@ def main():
         time.sleep(2.0)
 
         path, corners = scale_and_shift_path(raw_path, raw_corners, (0.0, 0.0))
+
+        print("[SIM] Hovering to stabilize...")
+        time.sleep(3.0)
 
         for idx, (x, y) in enumerate(path):
             print(f"[SIM] Flying to waypoint {idx + 1}/{len(path)}: x={x:.2f}, y={y:.2f}, z={TAKEOFF_HEIGHT:.2f}")
@@ -121,6 +117,8 @@ def main():
                     update_plot(drone_dot)
                     time.sleep(0.05)
 
+        print("[SIM] Hovering before landing...")
+        time.sleep(2.0)
         print("[SIM] Landing...")
         time.sleep(2.0)
         update_plot(drone_dot)
@@ -140,31 +138,31 @@ def main():
         commander.takeoff(TAKEOFF_HEIGHT, 2.0)
         time.sleep(3.0)
 
+        print("Hovering to stabilize...")
+        commander.go_to(current_pos[0], current_pos[1], TAKEOFF_HEIGHT, yaw=0.0, duration_s=3.0, relative=False)
+        time.sleep(3.0)
+
         offset = current_pos[0] - (raw_path[0][0] + 0.5) * GRID_CELL_SIZE, current_pos[1] - (raw_path[0][1] + 0.5) * GRID_CELL_SIZE
         path, corners = scale_and_shift_path(raw_path, raw_corners, offset)
 
         for idx, (x, y) in enumerate(path):
-            if idx < len(path) - 1:
-                next_x, next_y = path[idx + 1]
-                yaw = calculate_yaw((x, y), (next_x, next_y))
-            else:
-                yaw = 0.0
-
-            print(f"Flying to waypoint {idx + 1}/{len(path)}: x={x:.2f}, y={y:.2f}, z={TAKEOFF_HEIGHT:.2f}, yaw={yaw:.1f}")
-            commander.go_to(x, y, TAKEOFF_HEIGHT, yaw=yaw, duration_s=TRAVEL_DURATION, relative=False)
+            print(f"Flying to waypoint {idx + 1}/{len(path)}: x={x:.2f}, y={y:.2f}, z={TAKEOFF_HEIGHT:.2f}")
+            commander.go_to(x, y, TAKEOFF_HEIGHT, yaw=0.0, duration_s=TRAVEL_DURATION, relative=False)
             start = time.time()
             while time.time() - start < TRAVEL_DURATION + 0.2:
                 update_plot(drone_dot)
                 time.sleep(0.05)
 
+            trajectory.append((x, y))
+
             if raw_path[idx] in raw_corners:
                 print(f"Hovering at corner: x={x:.2f}, y={y:.2f}")
-                commander.go_to(x, y, TAKEOFF_HEIGHT, yaw=yaw, duration_s=2.0, relative=False)
-                time.sleep(2.0)
-                commander.go_to(x, y, TAKEOFF_HEIGHT, yaw=yaw, duration_s=2.0, relative=False)
-                time.sleep(2.0)
-                commander.go_to(x, y, TAKEOFF_HEIGHT, yaw=yaw, duration_s=1.5, relative=False)
-                time.sleep(1.5)
+                commander.go_to(x, y, TAKEOFF_HEIGHT, yaw=0.0, duration_s=1.0, relative=False)
+                time.sleep(1.0)
+
+        print("Hovering before landing...")
+        commander.go_to(x, y, TAKEOFF_HEIGHT, yaw=0.0, duration_s=2.0, relative=False)
+        time.sleep(2.0)
 
         print("Landing...")
         commander.land(0.0, 2.0)

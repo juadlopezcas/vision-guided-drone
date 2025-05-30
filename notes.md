@@ -1,4 +1,1 @@
-python3 -m cfclient.gui
-
-
-
+Drone's Flowdeck (and possibly other sensors (multiranger))) is sensitivity to high reflections and bright, white workspaces.
